@@ -1,0 +1,19 @@
+{
+  "name": "bot-do-enzo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app",
+    "test": "nodemon app"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "node-html-to-image": "^3.0.1",
+    "node-telegram-bot-api": "^0.50.0",
+    "request-promise": "^4.2.5"
+  }
+}
