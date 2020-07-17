@@ -92,6 +92,7 @@ bot.onText(/\/sendmail/, async (msg)=>{
             console.log('Imagem da tabela gerada com sucesso!')
             bot.sendPhoto(chatId, output);
         }).catch(err=>{
+            console.log(err);
             bot.sendMessage(chatId, 'Erro ao gerar a imagem');
         });        
         
