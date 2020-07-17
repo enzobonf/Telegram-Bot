@@ -82,9 +82,9 @@ bot.onText(/\/sendmail/, async (msg)=>{
         bot.sendMessage(chatId, 'Gerando imagem...')
 
         nodeHtmlToImage({
-            puppeteerArgs:[
-                '--no-sandbox'
-            ],
+            puppeteerArgs:{
+                 args: ['--no-sandbox']
+            },
             output,
             html: json.table
         })
