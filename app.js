@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const rp = require('request-promise').defaults({jar: true, simple: false});;
+const nodeHtmlToImage = require('node-html-to-image');
 
 require('dotenv').config();
  
@@ -7,11 +8,6 @@ require('dotenv').config();
 const token = process.env.TELEGRAM_TOKEN;
 const urlComissoes = process.env.URL_COMISSOES;
 //const tokenComissoes = process.env.TOKEN_COMISSOES;
-
-const userComissoes = {
-    user: process.env.USER_COMISSOES,
-    password: process.env.PASS_COMISSOES
-}
 
 const bot = new TelegramBot(token, {polling: true});
 
@@ -33,7 +29,7 @@ function authComissoes(){
         rp(options).then(response=>{
             resolve(response);
         }).catch(err=>{
-            console.log(err);
+            reject(err);
         })
 
     });
@@ -53,9 +49,16 @@ bot.onText(/\/sendmail/, async (msg)=>{
 
     const chatId = msg.chat.id;
 
+    if(msg.from.id != '1380249007') return bot.sendMessage(chatId, 'Sem permissão!');
+
     bot.sendMessage(chatId, 'Processando...');
 
-    await authComissoes();
+    try{
+        await authComissoes();
+    } 
+    catch(err){
+        return bot.sendMessage(chatId, `Algo deu errado: ${err}`);
+    }
 
     var options = {
         uri: `http://${urlComissoes}/send`,
@@ -64,7 +67,6 @@ bot.onText(/\/sendmail/, async (msg)=>{
         },
         headers: {
             'User-Agent': 'Request-Promise',
-            //'X-API-Key': tokenComissoes
         },
         json: true
     };
@@ -74,20 +76,27 @@ bot.onText(/\/sendmail/, async (msg)=>{
         let message = json.message;
         if(json.somaComissoes) message = message + `\nHá R$ ${json.somaComissoes} em comissões atrasadas.`;
 
-        const nodeHtmlToImage = require('node-html-to-image')
-
         let output = './image.png';
 
+        bot.sendMessage(chatId, message);
+        bot.sendMessage(chatId, 'Gerando imagem...')
+
         nodeHtmlToImage({
+            puppeteerArgs:[
+                '--no-sandbox'
+            ],
             output,
             html: json.table
         })
         .then(() => {
             console.log('Imagem da tabela gerada com sucesso!')
-            bot.sendMessage(chatId, message);
-            bot.sendPhoto(chatId, output)
-        });
+            bot.sendPhoto(chatId, output);
+        }).catch(err=>{
+            bot.sendMessage(chatId, 'Erro ao gerar a imagem');
+        });        
         
+    }).catch(err=>{
+        bot.sendMessage(chatId, `Algo deu errado: ${err}`);
     });
 
 
