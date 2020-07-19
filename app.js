@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const rp = require('request-promise').defaults({jar: true, simple: false});;
+const request = require('request-promise').defaults({jar: true, simple: false});;
 const nodeHtmlToImage = require('node-html-to-image');
 
 require('dotenv').config();
@@ -26,12 +26,13 @@ function authComissoes(){
             json: true
         };
 
-        rp(options).then(response=>{
-            resolve(response);
+        request(options).then(response=>{
+        
+            (response === undefined) ? resolve(response) : reject('Usuário ou senha incorretos');
+
         }).catch(err=>{
             reject(err);
         })
-
     });
 
 }
@@ -45,60 +46,73 @@ bot.onText(/\/echo (.+)/, (msg, match)=>{
 
 });
 
-bot.onText(/\/sendmail/, async (msg)=>{
+async function sendMail(){
 
-    const chatId = msg.chat.id;
+    bot.onText(/\/sendmail/, async (msg)=>{
 
-    if(msg.from.id != '1380249007') return bot.sendMessage(chatId, 'Sem permissão!');
-
-    bot.sendMessage(chatId, 'Processando...');
-
-    try{
-        await authComissoes();
-    } 
-    catch(err){
-        return bot.sendMessage(chatId, `Algo deu errado: ${err}`);
-    }
-
-    var options = {
-        uri: `http://${urlComissoes}/send`,
-        qs: { 
-            noView: '' // -> uri + '?access_token=xxxxx%20xxxxx'
-        },
-        headers: {
-            'User-Agent': 'Request-Promise',
-        },
-        json: true
-    };
-
-    rp(options).then(json=>{
-        
-        let message = json.message;
-        if(json.somaComissoes) message = message + `\nHá R$ ${json.somaComissoes} em comissões atrasadas.`;
-
-        let output = './image.png';
-
-        bot.sendMessage(chatId, message);
-        bot.sendMessage(chatId, 'Gerando imagem...')
-
-        nodeHtmlToImage({
-            puppeteerArgs:{
-                 args: ['--no-sandbox']
+        const chatId = msg.chat.id;
+    
+        if(msg.from.id != '1380249007') return bot.sendMessage(chatId, 'Sem permissão!');
+    
+        bot.sendMessage(chatId, 'Processando...');
+    
+        try{
+            await authComissoes();
+        }
+        catch(err){
+            return bot.sendMessage(chatId, `Algo deu errado: ${err}`);
+        }
+    
+        var options = {
+            uri: `http://${urlComissoes}/send`,
+            qs: { 
+                noView: '' // -> uri + '?access_token=xxxxx%20xxxxx'
             },
-            output,
-            html: json.table
-        })
-        .then(() => {
-            console.log('Imagem da tabela gerada com sucesso!')
-            bot.sendPhoto(chatId, output);
+            headers: {
+                'User-Agent': 'Request-Promise',
+            },
+            json: true
+        };
+    
+        request(options).then(json=>{
+            
+            let message = json.message;
+
+            bot.sendMessage(chatId, message);
+
+            //se não tiver comissões atrasadas, apenas envia a msg e retorna;
+            if(!json.somaComissoes) return;
+
+            bot.sendMessage(chatId, `Há R$ ${json.somaComissoes} em comissões atrasadas.`);
+
+            bot.sendMessage(chatId, 'Gerando imagem...');
+
+            let output = './image.png';
+    
+            nodeHtmlToImage({
+                puppeteerArgs:{
+                    args: ['--no-sandbox']
+                },
+                output,
+                html: json.table
+            })
+            .then(() => {
+
+                console.log('Imagem da tabela gerada com sucesso!')
+                bot.sendPhoto(chatId, output);
+
+            }).catch(err=>{
+                console.log(err);
+                bot.sendMessage(chatId, 'Erro ao gerar a imagem');
+            });       
+            
         }).catch(err=>{
-            console.log(err);
-            bot.sendMessage(chatId, 'Erro ao gerar a imagem');
-        });        
-        
-    }).catch(err=>{
-        bot.sendMessage(chatId, `Algo deu errado: ${err}`);
+            bot.sendMessage(chatId, `Algo deu errado: ${err}`);
+        });
+    
+    
     });
 
+}
 
-});
+sendMail();  
