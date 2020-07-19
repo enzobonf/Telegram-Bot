@@ -28,7 +28,7 @@ function authComissoes(){
 
         request(options).then(response=>{
         
-            (response === undefined) ? resolve(response) : reject('Usuário ou senha incorretos');
+             resolve(response);
 
         }).catch(err=>{
             reject(err);
